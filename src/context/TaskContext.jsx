@@ -6,7 +6,7 @@ const TaskContext = createContext();
 const CATEGORIES = ['work', 'personal', 'study', 'health'];
 
 function getStorageKey() {
-  return `focusflow-tasks-${new Date().toDateString()}`;
+  return `focusflow-tasks-persistent`;
 }
 
 export function TaskProvider({ children }) {
@@ -68,6 +68,11 @@ export function TaskProvider({ children }) {
     setTasks(prev => prev.filter(t => !t.completed));
   };
 
+  const resetData = () => {
+    setTasks([]);
+    setActiveTaskId(null);
+  };
+
   const getFilteredTasks = () => {
     switch (filter) {
       case 'active': return tasks.filter(t => !t.completed);
@@ -99,6 +104,7 @@ export function TaskProvider({ children }) {
       updateTask,
       clearCompleted,
       getFilteredTasks,
+      resetData,
     }}>
       {children}
     </TaskContext.Provider>

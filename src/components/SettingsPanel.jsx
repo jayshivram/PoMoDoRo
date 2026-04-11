@@ -1,10 +1,12 @@
 import { useTheme } from '../context/ThemeContext';
 import { useTimer } from '../context/TimerContext';
+import { useTasks } from '../context/TaskContext';
 import { FiX } from 'react-icons/fi';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function SettingsPanel({ isOpen, onClose }) {
   const { theme, setTheme, THEMES } = useTheme();
+  const { resetData: resetTaskData } = useTasks();
   const {
     durations,
     setDurations,
@@ -12,6 +14,7 @@ export default function SettingsPanel({ isOpen, onClose }) {
     setAutoStartBreaks,
     soundEnabled,
     setSoundEnabled,
+    resetTimerData,
   } = useTimer();
 
   const handleDurationChange = (key, value) => {
@@ -162,6 +165,55 @@ export default function SettingsPanel({ isOpen, onClose }) {
                   role="switch"
                   aria-checked={soundEnabled}
                 />
+              </div>
+            </div>
+
+            {/* Data Management */}
+            <div className="settings-group">
+              <div className="settings-group-title">Data Management</div>
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                <button
+                  style={{
+                    flex: 1,
+                    padding: '0.75rem',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border)',
+                    background: 'var(--surface-hover)',
+                    color: 'var(--text-primary)',
+                    cursor: 'pointer',
+                    fontWeight: 500,
+                    fontSize: '0.9rem',
+                  }}
+                  onClick={() => {
+                    if (window.confirm('Are you sure you want to reset your current session data?')) {
+                      resetTimerData();
+                      if (resetTaskData) resetTaskData();
+                    }
+                  }}
+                >
+                  Reset Session Data
+                </button>
+                <button
+                  style={{
+                    flex: 1,
+                    padding: '0.75rem',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border)',
+                    background: 'var(--surface-hover)',
+                    color: 'var(--text-primary)',
+                    cursor: 'pointer',
+                    fontWeight: 500,
+                    fontSize: '0.9rem',
+                  }}
+                  onClick={() => {
+                    if (window.confirm('Are you sure you want to completely clear all data and reload?')) {
+                      localStorage.clear();
+                      window.location.reload();
+                    }
+                  }}
+                >
+                  Clear Cache & Reload
+                </button>
               </div>
             </div>
 

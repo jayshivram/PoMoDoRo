@@ -29,25 +29,30 @@ export function TimerProvider({ children }) {
   });
 
   // Timer state
-  const [phase, setPhase] = useState('work');
-  const [timeLeft, setTimeLeft] = useState(durations.work * 60);
-  const [isRunning, setIsRunning] = useState(false);
+  const [phase, setPhase] = useState(() => {
+    return localStorage.getItem('focusflow-phase') || 'work';
+  });
+  const [timeLeft, setTimeLeft] = useState(() => {
+    const stored = localStorage.getItem('focusflow-timeleft');
+    if (stored) return parseInt(stored, 10);
+    const initialPhase = localStorage.getItem('focusflow-phase') || 'work';
+    return (durations[initialPhase] || durations.work) * 60;
+  });
+  const [isRunning, setIsRunning] = useState(() => {
+    return localStorage.getItem('focusflow-isrunning') === 'true';
+  });
   const [sessionsCompleted, setSessionsCompleted] = useState(() => {
     const stored = localStorage.getItem('focusflow-sessions');
-    const data = stored ? JSON.parse(stored) : { count: 0, date: new Date().toDateString() };
-    // Reset if it's a new day
-    if (data.date !== new Date().toDateString()) {
-      return 0;
-    }
-    return data.count;
+    return stored ? parseInt(stored, 10) : 0;
   });
   const [totalFocusMinutes, setTotalFocusMinutes] = useState(() => {
     const stored = localStorage.getItem('focusflow-focus-minutes');
-    const data = stored ? JSON.parse(stored) : { minutes: 0, date: new Date().toDateString() };
-    if (data.date !== new Date().toDateString()) return 0;
-    return data.minutes;
+    return stored ? parseInt(stored, 10) : 0;
   });
-  const [cyclePosition, setCyclePosition] = useState(0); // 0-3 for 4 work sessions before long break
+  const [cyclePosition, setCyclePosition] = useState(() => {
+    const stored = localStorage.getItem('focusflow-cycle');
+    return stored ? parseInt(stored, 10) : 0;
+  });
 
   const intervalRef = useRef(null);
   const audioRef = useRef(null);
@@ -68,20 +73,31 @@ export function TimerProvider({ children }) {
     localStorage.setItem('focusflow-sound', String(soundEnabled));
   }, [soundEnabled]);
 
+  // Persist timer session states
+  useEffect(() => {
+    localStorage.setItem('focusflow-phase', phase);
+  }, [phase]);
+
+  useEffect(() => {
+    localStorage.setItem('focusflow-timeleft', String(timeLeft));
+  }, [timeLeft]);
+
+  useEffect(() => {
+    localStorage.setItem('focusflow-isrunning', String(isRunning));
+  }, [isRunning]);
+
+  useEffect(() => {
+    localStorage.setItem('focusflow-cycle', String(cyclePosition));
+  }, [cyclePosition]);
+
   // Persist sessions
   useEffect(() => {
-    localStorage.setItem('focusflow-sessions', JSON.stringify({
-      count: sessionsCompleted,
-      date: new Date().toDateString(),
-    }));
+    localStorage.setItem('focusflow-sessions', String(sessionsCompleted));
   }, [sessionsCompleted]);
 
   // Persist focus minutes
   useEffect(() => {
-    localStorage.setItem('focusflow-focus-minutes', JSON.stringify({
-      minutes: totalFocusMinutes,
-      date: new Date().toDateString(),
-    }));
+    localStorage.setItem('focusflow-focus-minutes', String(totalFocusMinutes));
   }, [totalFocusMinutes]);
 
   // Create audio context for notification sound
@@ -197,12 +213,16 @@ export function TimerProvider({ children }) {
     }
   }, [phase, cyclePosition, durations, autoStartBreaks, playNotification, sendBrowserNotification]);
 
-  // Update timeLeft when durations change (only if not running)
+  // Update timeLeft only when the setting for the current phase's duration is explicitly modified
+  const prevDurationsRef = useRef(durations);
   useEffect(() => {
-    if (!isRunning) {
-      setTimeLeft(durations[phase] * 60);
+    if (prevDurationsRef.current[phase] !== durations[phase]) {
+      if (!isRunning) {
+        setTimeLeft(durations[phase] * 60);
+      }
     }
-  }, [durations, phase]);
+    prevDurationsRef.current = durations;
+  }, [durations, phase, isRunning]);
 
   const start = () => setIsRunning(true);
   const pause = () => setIsRunning(false);
@@ -213,6 +233,17 @@ export function TimerProvider({ children }) {
     focusAccumulatorRef.current = 0;
     startTimeRef.current = null;
     setTimeLeft(durations[phase] * 60);
+  };
+
+  const resetTimerData = () => {
+    setIsRunning(false);
+    focusAccumulatorRef.current = 0;
+    startTimeRef.current = null;
+    setPhase('work');
+    setTimeLeft(durations.work * 60);
+    setCyclePosition(0);
+    setSessionsCompleted(0);
+    setTotalFocusMinutes(0);
   };
 
   const switchPhase = (newPhase) => {
@@ -262,6 +293,7 @@ export function TimerProvider({ children }) {
       pause,
       toggle,
       reset,
+      resetTimerData,
       switchPhase,
       skipToNext,
       formatTime,
