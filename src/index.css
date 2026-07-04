@@ -271,6 +271,7 @@ button, input, select {
   max-width: 1180px;
   margin: 0 auto;
   padding: var(--space-md);
+  padding-top: var(--space-xl);
   padding-bottom: 100px;
 }
 
@@ -384,6 +385,7 @@ button, input, select {
   align-items: center;
   justify-content: space-between;
   padding: var(--space-md) var(--space-lg);
+  padding-top: max(var(--space-md), env(safe-area-inset-top));
   background: var(--bg-primary);
   border-bottom: 2px solid var(--border-primary);
   position: sticky;
@@ -1807,11 +1809,13 @@ button, input, select {
    ═══════════════════════════════════════════════════════════════ */
 @media (max-width: 480px) {
   .navbar {
-    padding: var(--space-sm) var(--space-md);
+    padding: var(--space-md);
+    padding-top: max(var(--space-md), env(safe-area-inset-top));
   }
 
   .main-content {
     padding: var(--space-md) var(--space-sm);
+    padding-top: var(--space-xl);
   }
 
   .timer-display {

@@ -18,13 +18,30 @@ const PHASE_LABELS = {
   longBreak: 'Long Break',
 };
 
+// parseInt on a corrupted/non-numeric stored value (or a literal "NaN"
+// string written by a past bug) silently returns NaN, which then poisons
+// every arithmetic update derived from it forever. Falling back to a
+// default whenever the parse isn't a finite number makes that self-healing.
+function readStoredInt(key, fallback) {
+  const stored = localStorage.getItem(key);
+  const parsed = stored !== null ? parseInt(stored, 10) : NaN;
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
 export function TimerProvider({ children }) {
   const { showToast } = useToast();
 
   // Settings
   const [durations, setDurations] = useState(() => {
     const stored = localStorage.getItem('focusflow-durations');
-    return stored ? JSON.parse(stored) : DEFAULT_DURATIONS;
+    if (!stored) return DEFAULT_DURATIONS;
+    try {
+      const parsed = JSON.parse(stored);
+      const isValid = ['work', 'shortBreak', 'longBreak'].every(k => Number.isFinite(parsed?.[k]));
+      return isValid ? parsed : DEFAULT_DURATIONS;
+    } catch {
+      return DEFAULT_DURATIONS;
+    }
   });
   const [autoStartBreaks, setAutoStartBreaks] = useState(() => {
     return localStorage.getItem('focusflow-autostart') === 'true';
@@ -33,36 +50,31 @@ export function TimerProvider({ children }) {
     const stored = localStorage.getItem('focusflow-sound');
     return stored === null ? true : stored === 'true';
   });
-  const [sessionsBeforeLongBreak, setSessionsBeforeLongBreak] = useState(() => {
-    const stored = localStorage.getItem('focusflow-sessions-before-long-break');
-    return stored ? parseInt(stored, 10) : DEFAULT_SESSIONS_BEFORE_LONG_BREAK;
-  });
+  const [sessionsBeforeLongBreak, setSessionsBeforeLongBreak] = useState(() => (
+    readStoredInt('focusflow-sessions-before-long-break', DEFAULT_SESSIONS_BEFORE_LONG_BREAK)
+  ));
 
   // Timer state
   const [phase, setPhase] = useState(() => {
     return localStorage.getItem('focusflow-phase') || 'work';
   });
   const [timeLeft, setTimeLeft] = useState(() => {
-    const stored = localStorage.getItem('focusflow-timeleft');
-    if (stored) return parseInt(stored, 10);
     const initialPhase = localStorage.getItem('focusflow-phase') || 'work';
-    return (durations[initialPhase] || durations.work) * 60;
+    const fallback = (durations[initialPhase] || durations.work) * 60;
+    return readStoredInt('focusflow-timeleft', fallback);
   });
   const [isRunning, setIsRunning] = useState(() => {
     return localStorage.getItem('focusflow-isrunning') === 'true';
   });
-  const [sessionsCompleted, setSessionsCompleted] = useState(() => {
-    const stored = localStorage.getItem('focusflow-sessions');
-    return stored ? parseInt(stored, 10) : 0;
-  });
-  const [totalFocusMinutes, setTotalFocusMinutes] = useState(() => {
-    const stored = localStorage.getItem('focusflow-focus-minutes');
-    return stored ? parseInt(stored, 10) : 0;
-  });
-  const [cyclePosition, setCyclePosition] = useState(() => {
-    const stored = localStorage.getItem('focusflow-cycle');
-    return stored ? parseInt(stored, 10) : 0;
-  });
+  const [sessionsCompleted, setSessionsCompleted] = useState(() => (
+    readStoredInt('focusflow-sessions', 0)
+  ));
+  const [totalFocusMinutes, setTotalFocusMinutes] = useState(() => (
+    readStoredInt('focusflow-focus-minutes', 0)
+  ));
+  const [cyclePosition, setCyclePosition] = useState(() => (
+    readStoredInt('focusflow-cycle', 0)
+  ));
 
   const intervalRef = useRef(null);
   const audioRef = useRef(null);
