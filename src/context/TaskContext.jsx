@@ -1,5 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+import { FiTrash2, FiCheckCircle } from 'react-icons/fi';
+import { useToast } from './ToastContext';
 
 const TaskContext = createContext();
 
@@ -10,6 +12,7 @@ function getStorageKey() {
 }
 
 export function TaskProvider({ children }) {
+  const { showToast } = useToast();
   const [tasks, setTasks] = useState(() => {
     const stored = localStorage.getItem(getStorageKey());
     return stored ? JSON.parse(stored) : [];
@@ -38,8 +41,18 @@ export function TaskProvider({ children }) {
   };
 
   const removeTask = (id) => {
+    const removedTask = tasks.find(t => t.id === id);
+    if (!removedTask) return;
+
     setTasks(prev => prev.filter(t => t.id !== id));
     if (activeTaskId === id) setActiveTaskId(null);
+
+    showToast({
+      message: `Deleted "${removedTask.text}"`,
+      icon: <FiTrash2 />,
+      actionLabel: 'Undo',
+      onAction: () => setTasks(prev => [removedTask, ...prev]),
+    });
   };
 
   const toggleTask = (id) => {
@@ -49,9 +62,24 @@ export function TaskProvider({ children }) {
   };
 
   const incrementPomodoro = (id) => {
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+
+    const completedPomodoros = task.completedPomodoros + 1;
+    const justFinished = !task.completed && completedPomodoros >= task.estimatedPomodoros;
+
     setTasks(prev => prev.map(t =>
-      t.id === id ? { ...t, completedPomodoros: t.completedPomodoros + 1 } : t
+      t.id === id
+        ? { ...t, completedPomodoros, completed: t.completed || completedPomodoros >= t.estimatedPomodoros }
+        : t
     ));
+
+    if (justFinished) {
+      showToast({
+        message: `"${task.text}" complete — nice work!`,
+        icon: <FiCheckCircle />,
+      });
+    }
   };
 
   const setAsActive = (id) => {
@@ -65,7 +93,17 @@ export function TaskProvider({ children }) {
   };
 
   const clearCompleted = () => {
+    const removed = tasks.filter(t => t.completed);
+    if (removed.length === 0) return;
+
     setTasks(prev => prev.filter(t => !t.completed));
+
+    showToast({
+      message: `Cleared ${removed.length} completed task${removed.length > 1 ? 's' : ''}`,
+      icon: <FiTrash2 />,
+      actionLabel: 'Undo',
+      onAction: () => setTasks(prev => [...removed, ...prev]),
+    });
   };
 
   const resetData = () => {

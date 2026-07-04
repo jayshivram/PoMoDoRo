@@ -1,4 +1,6 @@
 import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import { FiTarget, FiCoffee } from 'react-icons/fi';
+import { useToast } from './ToastContext';
 
 const TimerContext = createContext();
 
@@ -8,6 +10,8 @@ const DEFAULT_DURATIONS = {
   longBreak: 15,
 };
 
+const DEFAULT_SESSIONS_BEFORE_LONG_BREAK = 4;
+
 const PHASE_LABELS = {
   work: 'Focus Time',
   shortBreak: 'Short Break',
@@ -15,6 +19,8 @@ const PHASE_LABELS = {
 };
 
 export function TimerProvider({ children }) {
+  const { showToast } = useToast();
+
   // Settings
   const [durations, setDurations] = useState(() => {
     const stored = localStorage.getItem('focusflow-durations');
@@ -26,6 +32,10 @@ export function TimerProvider({ children }) {
   const [soundEnabled, setSoundEnabled] = useState(() => {
     const stored = localStorage.getItem('focusflow-sound');
     return stored === null ? true : stored === 'true';
+  });
+  const [sessionsBeforeLongBreak, setSessionsBeforeLongBreak] = useState(() => {
+    const stored = localStorage.getItem('focusflow-sessions-before-long-break');
+    return stored ? parseInt(stored, 10) : DEFAULT_SESSIONS_BEFORE_LONG_BREAK;
   });
 
   // Timer state
@@ -72,6 +82,10 @@ export function TimerProvider({ children }) {
   useEffect(() => {
     localStorage.setItem('focusflow-sound', String(soundEnabled));
   }, [soundEnabled]);
+
+  useEffect(() => {
+    localStorage.setItem('focusflow-sessions-before-long-break', String(sessionsBeforeLongBreak));
+  }, [sessionsBeforeLongBreak]);
 
   // Persist timer session states
   useEffect(() => {
@@ -129,12 +143,14 @@ export function TimerProvider({ children }) {
   // Browser notification
   const sendBrowserNotification = useCallback((title, body) => {
     if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification(title, { body, icon: '/vite.svg' });
+      new Notification(title, { body, icon: '/favicon.png' });
     }
   }, []);
 
-  // Request notification permission
-  useEffect(() => {
+  // Ask for notification permission the first time the user actually starts
+  // a session, so the browser prompt has a user-gesture context instead of
+  // firing unsolicited on page load (where it's commonly auto-denied).
+  const requestNotificationPermission = useCallback(() => {
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission();
     }
@@ -189,17 +205,19 @@ export function TimerProvider({ children }) {
       setSessionsCompleted(prev => prev + 1);
       const newCyclePos = cyclePosition + 1;
 
-      if (newCyclePos >= 4) {
-        // Long break after 4 sessions
+      if (newCyclePos >= sessionsBeforeLongBreak) {
+        // Long break after N sessions
         setCyclePosition(0);
         setPhase('longBreak');
         setTimeLeft(durations.longBreak * 60);
-        sendBrowserNotification('Long Break!', 'Great work! Take a 15 minute break.');
+        sendBrowserNotification('Long Break!', `Great work! Take a ${durations.longBreak} minute break.`);
+        showToast({ message: `Long break — ${durations.longBreak} min. You earned it.`, icon: <FiCoffee /> });
       } else {
         setCyclePosition(newCyclePos);
         setPhase('shortBreak');
         setTimeLeft(durations.shortBreak * 60);
-        sendBrowserNotification('Short Break!', 'Take a 5 minute break.');
+        sendBrowserNotification('Short Break!', `Take a ${durations.shortBreak} minute break.`);
+        showToast({ message: `Short break — ${durations.shortBreak} min`, icon: <FiCoffee /> });
       }
 
       if (autoStartBreaks) {
@@ -210,8 +228,9 @@ export function TimerProvider({ children }) {
       setPhase('work');
       setTimeLeft(durations.work * 60);
       sendBrowserNotification('Focus Time!', 'Break is over. Let\'s get back to work!');
+      showToast({ message: 'Back to focus time', icon: <FiTarget /> });
     }
-  }, [phase, cyclePosition, durations, autoStartBreaks, playNotification, sendBrowserNotification]);
+  }, [phase, cyclePosition, durations, autoStartBreaks, sessionsBeforeLongBreak, playNotification, sendBrowserNotification, showToast]);
 
   // Update timeLeft only when the setting for the current phase's duration is explicitly modified
   const prevDurationsRef = useRef(durations);
@@ -224,9 +243,15 @@ export function TimerProvider({ children }) {
     prevDurationsRef.current = durations;
   }, [durations, phase, isRunning]);
 
-  const start = () => setIsRunning(true);
+  const start = () => {
+    requestNotificationPermission();
+    setIsRunning(true);
+  };
   const pause = () => setIsRunning(false);
-  const toggle = () => setIsRunning(prev => !prev);
+  const toggle = () => {
+    requestNotificationPermission();
+    setIsRunning(prev => !prev);
+  };
 
   const reset = () => {
     setIsRunning(false);
@@ -287,6 +312,8 @@ export function TimerProvider({ children }) {
       setAutoStartBreaks,
       soundEnabled,
       setSoundEnabled,
+      sessionsBeforeLongBreak,
+      setSessionsBeforeLongBreak,
 
       // Actions
       start,

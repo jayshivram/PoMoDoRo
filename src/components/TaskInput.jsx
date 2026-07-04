@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTasks } from '../context/TaskContext';
 import { FiPlus, FiMinus } from 'react-icons/fi';
+import { GiTomato } from 'react-icons/gi';
 
 export default function TaskInput() {
   const { addTask, categories } = useTasks();
@@ -23,7 +24,7 @@ export default function TaskInput() {
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+    <form onSubmit={handleSubmit} className="task-input-form">
       <div className="task-input-container">
         <input
           type="text"
@@ -44,7 +45,7 @@ export default function TaskInput() {
           <FiPlus />
         </button>
       </div>
-      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+      <div className="task-input-row">
         <select
           className="category-select"
           value={category}
@@ -77,7 +78,7 @@ export default function TaskInput() {
           >
             <FiPlus size={12} />
           </button>
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', marginLeft: '2px' }}>🍅</span>
+          <GiTomato className="pomo-estimate-icon" />
         </div>
       </div>
     </form>

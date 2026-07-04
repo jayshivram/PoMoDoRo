@@ -18,7 +18,7 @@ export function ThemeProvider({ children }) {
     // update meta theme-color
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) {
-      const colors = { light: '#f8f9fc', dark: '#0f0f14', amoled: '#000000' };
+      const colors = { light: '#efe7d6', dark: '#1a140e', amoled: '#000000' };
       meta.setAttribute('content', colors[theme]);
     }
   }, [theme]);

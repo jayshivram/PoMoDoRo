@@ -1,25 +1,17 @@
 import { useTimer } from '../context/TimerContext';
-import { useTasks } from '../context/TaskContext';
+import { useSessionSkip } from '../hooks/useSessionSkip';
 import { FiPlay, FiPause, FiRotateCcw, FiSkipForward } from 'react-icons/fi';
 
 export default function TimerControls() {
-  const { isRunning, toggle, reset, skipToNext, phase } = useTimer();
-  const { activeTask, incrementPomodoro } = useTasks();
-
-  const handleSkip = () => {
-    // If we're in work phase and there's an active task, increment its pomodoro count
-    if (phase === 'work' && activeTask) {
-      incrementPomodoro(activeTask.id);
-    }
-    skipToNext();
-  };
+  const { isRunning, toggle, reset } = useTimer();
+  const handleSkip = useSessionSkip();
 
   return (
     <div className="timer-controls" id="timer-controls">
       <button
         className="control-btn control-btn-secondary"
         onClick={reset}
-        title="Reset"
+        title="Reset (R)"
         id="reset-btn"
         aria-label="Reset timer"
       >
@@ -29,7 +21,7 @@ export default function TimerControls() {
       <button
         className="control-btn control-btn-primary"
         onClick={toggle}
-        title={isRunning ? 'Pause' : 'Start'}
+        title={isRunning ? 'Pause (Space)' : 'Start (Space)'}
         id="start-pause-btn"
         aria-label={isRunning ? 'Pause timer' : 'Start timer'}
       >
@@ -39,7 +31,7 @@ export default function TimerControls() {
       <button
         className="control-btn control-btn-secondary"
         onClick={handleSkip}
-        title="Skip to next"
+        title="Skip to next (N)"
         id="skip-btn"
         aria-label="Skip to next phase"
       >

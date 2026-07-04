@@ -1,12 +1,15 @@
 import { useTheme } from '../context/ThemeContext';
 import { useTimer } from '../context/TimerContext';
 import { useTasks } from '../context/TaskContext';
+import { useWeather } from '../context/WeatherContext';
+import CityAutocomplete from './CityAutocomplete';
 import { FiX } from 'react-icons/fi';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function SettingsPanel({ isOpen, onClose }) {
   const { theme, setTheme, THEMES } = useTheme();
   const { resetData: resetTaskData } = useTasks();
+  const { status: weatherStatus, errorMessage: weatherError } = useWeather();
   const {
     durations,
     setDurations,
@@ -14,6 +17,8 @@ export default function SettingsPanel({ isOpen, onClose }) {
     setAutoStartBreaks,
     soundEnabled,
     setSoundEnabled,
+    sessionsBeforeLongBreak,
+    setSessionsBeforeLongBreak,
     resetTimerData,
   } = useTimer();
 
@@ -21,6 +26,13 @@ export default function SettingsPanel({ isOpen, onClose }) {
     const num = parseInt(value, 10);
     if (!isNaN(num) && num > 0 && num <= 120) {
       setDurations(prev => ({ ...prev, [key]: num }));
+    }
+  };
+
+  const handleSessionsBeforeLongBreakChange = (value) => {
+    const num = parseInt(value, 10);
+    if (!isNaN(num) && num >= 2 && num <= 8) {
+      setSessionsBeforeLongBreak(num);
     }
   };
 
@@ -82,6 +94,20 @@ export default function SettingsPanel({ isOpen, onClose }) {
               </div>
             </div>
 
+            {/* Weather */}
+            <div className="settings-group">
+              <div className="settings-group-title">Weather</div>
+              <div className="settings-row">
+                <div>
+                  <div className="settings-label">City</div>
+                  <div className="settings-sublabel">
+                    {weatherStatus === 'error' && weatherError ? weatherError : 'Shown next to the theme toggle · via Open-Meteo'}
+                  </div>
+                </div>
+                <CityAutocomplete />
+              </div>
+            </div>
+
             {/* Timer Durations */}
             <div className="settings-group">
               <div className="settings-group-title">Timer Durations (minutes)</div>
@@ -121,7 +147,7 @@ export default function SettingsPanel({ isOpen, onClose }) {
               <div className="settings-row">
                 <div>
                   <div className="settings-label">Long Break</div>
-                  <div className="settings-sublabel">After every 4 sessions</div>
+                  <div className="settings-sublabel">After every {sessionsBeforeLongBreak} sessions</div>
                 </div>
                 <input
                   type="number"
@@ -131,6 +157,22 @@ export default function SettingsPanel({ isOpen, onClose }) {
                   min="1"
                   max="60"
                   id="setting-long-break-duration"
+                />
+              </div>
+
+              <div className="settings-row">
+                <div>
+                  <div className="settings-label">Sessions Before Long Break</div>
+                  <div className="settings-sublabel">Focus sessions per cycle</div>
+                </div>
+                <input
+                  type="number"
+                  className="settings-number-input"
+                  value={sessionsBeforeLongBreak}
+                  onChange={(e) => handleSessionsBeforeLongBreakChange(e.target.value)}
+                  min="2"
+                  max="8"
+                  id="setting-sessions-before-long-break"
                 />
               </div>
             </div>
@@ -144,12 +186,14 @@ export default function SettingsPanel({ isOpen, onClose }) {
                   <div className="settings-label">Auto-start Breaks</div>
                   <div className="settings-sublabel">Automatically begin break after focus</div>
                 </div>
-                <div
+                <button
+                  type="button"
                   className={`toggle-switch ${autoStartBreaks ? 'active' : ''}`}
                   onClick={() => setAutoStartBreaks(!autoStartBreaks)}
                   id="toggle-autostart"
                   role="switch"
                   aria-checked={autoStartBreaks}
+                  aria-label="Auto-start breaks"
                 />
               </div>
 
@@ -158,12 +202,14 @@ export default function SettingsPanel({ isOpen, onClose }) {
                   <div className="settings-label">Sound</div>
                   <div className="settings-sublabel">Play notification when session ends</div>
                 </div>
-                <div
+                <button
+                  type="button"
                   className={`toggle-switch ${soundEnabled ? 'active' : ''}`}
                   onClick={() => setSoundEnabled(!soundEnabled)}
                   id="toggle-sound"
                   role="switch"
                   aria-checked={soundEnabled}
+                  aria-label="Enable sound"
                 />
               </div>
             </div>
@@ -171,19 +217,9 @@ export default function SettingsPanel({ isOpen, onClose }) {
             {/* Data Management */}
             <div className="settings-group">
               <div className="settings-group-title">Data Management</div>
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+              <div className="settings-action-row">
                 <button
-                  style={{
-                    flex: 1,
-                    padding: '0.75rem',
-                    borderRadius: '8px',
-                    border: '1px solid var(--border)',
-                    background: 'var(--surface-hover)',
-                    color: 'var(--text-primary)',
-                    cursor: 'pointer',
-                    fontWeight: 500,
-                    fontSize: '0.9rem',
-                  }}
+                  className="settings-action-btn"
                   onClick={() => {
                     if (window.confirm('Are you sure you want to reset your current session data?')) {
                       resetTimerData();
@@ -194,17 +230,7 @@ export default function SettingsPanel({ isOpen, onClose }) {
                   Reset Session Data
                 </button>
                 <button
-                  style={{
-                    flex: 1,
-                    padding: '0.75rem',
-                    borderRadius: '8px',
-                    border: '1px solid var(--border)',
-                    background: 'var(--surface-hover)',
-                    color: 'var(--text-primary)',
-                    cursor: 'pointer',
-                    fontWeight: 500,
-                    fontSize: '0.9rem',
-                  }}
+                  className="settings-action-btn"
                   onClick={() => {
                     if (window.confirm('Are you sure you want to completely clear all data and reload?')) {
                       localStorage.clear();
@@ -220,10 +246,10 @@ export default function SettingsPanel({ isOpen, onClose }) {
             {/* About */}
             <div className="settings-group">
               <div className="settings-group-title">About</div>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', lineHeight: 1.6 }}>
-                <strong style={{ color: 'var(--text-secondary)' }}>PoMoDoRo v1.0</strong>
+              <div className="settings-about">
+                <strong>PoMoDoRo v1.0</strong>
                 <br />
-                A beautiful Pomodoro timer designed for daily productivity.
+                An analog-inspired focus timer designed for daily productivity.
                 <br />
                 Built with React & Vite.
               </div>

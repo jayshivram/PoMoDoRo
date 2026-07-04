@@ -1,13 +1,11 @@
 import { useTheme } from '../context/ThemeContext';
-import { useTimer } from '../context/TimerContext';
-import { useState } from 'react';
 import { HiOutlineCog6Tooth } from 'react-icons/hi2';
-import { IoSunnyOutline, IoMoonOutline, IoPhonePortraitOutline } from 'react-icons/io5';
+import { IoSunnyOutline, IoMoonOutline } from 'react-icons/io5';
 import { MdOutlineDarkMode } from 'react-icons/md';
+import WeatherWidget from './WeatherWidget';
 
 export default function Navbar({ onOpenSettings }) {
   const { theme, cycleTheme } = useTheme();
-  const { sessionsCompleted } = useTimer();
 
   const themeIcon = {
     light: <IoSunnyOutline />,
@@ -19,10 +17,14 @@ export default function Navbar({ onOpenSettings }) {
     <nav className="navbar" id="main-navbar">
       <div className="navbar-brand">
         <div className="navbar-logo">P</div>
-        <span className="navbar-title">PoMoDoRo</span>
+        <div className="navbar-title-group">
+          <span className="navbar-title">PoMoDoRo</span>
+          <span className="navbar-tagline">Focus Studio</span>
+        </div>
       </div>
 
       <div className="navbar-actions">
+        <WeatherWidget onOpenSettings={onOpenSettings} />
         <button
           className="navbar-btn"
           onClick={cycleTheme}
